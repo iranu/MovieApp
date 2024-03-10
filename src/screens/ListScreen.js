@@ -12,11 +12,9 @@ import {
   SafeAreaView,
   StatusBar,
   StyleSheet,
-  useColorScheme,
-  FlatList,
+  FlatList
 } from 'react-native';
 
-import {Colors} from 'react-native/Libraries/NewAppScreen';
 import Header from '../components/Header';
 import {
   SCREEN_HEIGHT
@@ -24,22 +22,22 @@ import {
 
 import ListItem from '../components/ListItem';
 import EmptyComponent from '../components/EmptyComponent';
+import LoadingComponent from '../components/LoadingComponent';
 import colors from '../theme/colors';
 
-import { fetchInitialData, fetchNextPage, searchData } from '../features/contentListSlice';
+import { fetchData, searchData } from '../features/contentListSlice';
 
 // number of columns in the FlatList
 const NUM_COLUMNS = 3;
 
 const ListScreen = () => {
-  const isDarkMode = useColorScheme() === 'dark';
   const [isSearchEnabled, setIsSearchEnabled] = useState(false);
-  const { data, currentPage, dataSearched } = useSelector(state => state.content);
+  const { data, currentPage, dataSearched, loading } = useSelector(state => state.content);
   const dispatch = useDispatch();
 
   // fetch initial data on component mount
   useEffect(() => {
-    dispatch(fetchInitialData());
+    dispatch(fetchData(currentPage));
   }, []);
 
   // function to load more data when reaching the end of the list
@@ -49,7 +47,7 @@ const ListScreen = () => {
       currentPage <= 3 &&
       !isSearchEnabled
     ) {
-      dispatch(fetchNextPage());
+      dispatch(fetchData(currentPage));
     }
   };
 
@@ -81,7 +79,7 @@ const ListScreen = () => {
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar
-        barStyle={'dark-content'}
+        barStyle={'light-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
       {/* header component for search */}
@@ -89,7 +87,7 @@ const ListScreen = () => {
         onStartSearching={onStartSearching}
         resetSearch={resetSearch}
       />
-      <FlatList
+      {loading?  <LoadingComponent />: <FlatList
         style={ListScreenStyles.flatListViewContainer}
         data={isSearchEnabled ? dataSearched : data}
         renderItem={({item}) => <ListItem item={item} />}
@@ -100,7 +98,7 @@ const ListScreen = () => {
         showsVerticalScrollIndicator={false}
         initialNumToRender={20}
         ListEmptyComponent={<EmptyComponent />}
-      />
+      />}
     </SafeAreaView>
   );
 };

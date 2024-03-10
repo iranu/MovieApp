@@ -3,44 +3,59 @@
  * It manages the state related to fetching and searching content data.
  */
 
-import { createSlice } from '@reduxjs/toolkit';
-import { json } from '../data';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
+import { API_URL } from '../constant';
 
-// initial state for the contentListSlice reducer
+// defining the initial state
 const initialState = {
-  data: [], // array to store fetched data
-  currentPage: 1, // current page number
-  dataSearched: [], // array to store search results
+  data: [],
+  currentPage: 1,
+  loading: true,
+  error: null,
 };
 
-// create contentListSlice using createSlice function
-const contentListSlice = createSlice({
-  name: 'content', 
-  initialState, 
-  reducers: {
-    // action to fetch initial data
-    fetchInitialData(state) {
-      state.data = json.page1['page']['content-items'].content; 
-      state.currentPage = 1; // Set current page to 1
-    },
-    // action to fetch next page data
-    fetchNextPage(state) {
-      const nextPageData = json[`page${state.currentPage + 1}`]; 
-      if (nextPageData) {
-        // if next page data exists
-        state.data = [...state.data, ...nextPageData['page']['content-items'].content]; 
-        state.currentPage += 1;
-      }
-    },
-    // action to search data based on input text
-    searchData(state, action) {
-      state.dataSearched = state.data.filter(item =>
-        item.name.toLowerCase().includes(action.payload.toLowerCase()),
-      );
-      console.log('state.dataSearched',state.dataSearched)
+// defining the thunk action to fetch initial data asynchronously
+export const fetchData = createAsyncThunk(
+  'content/fetchInitialData',
+  async (currentPage,thunkAPI) => {
+    try {
+      const response = await axios.get(`${API_URL}api/CONTENTLISTINGPAGE-PAGE${currentPage}.json`);
+      return response.data.page['content-items'].content;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
     }
+  }
+);
+
+const contentListSlice = createSlice({
+  name: 'content',
+  initialState,
+  reducers: {
+    searchData(state, action) {
+      // convert search term to lowercase for case-insensitive search
+      const searchTerm = action.payload.toLowerCase(); 
+      state.dataSearched = state.data.filter(item =>
+        item.name.toLowerCase().includes(searchTerm)
+      );
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchData.pending, (state) => {
+        //loading
+      })
+      .addCase(fetchData.fulfilled, (state, action) => {
+        state.loading = false;
+        state.data = [...state.data, ...action.payload];
+        state.currentPage += 1;
+      })
+      .addCase(fetchData.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
   },
 });
 
-export const { fetchInitialData, fetchNextPage, searchData, resetSearchData } = contentListSlice.actions;
+export const { searchData } = contentListSlice.actions;
 export default contentListSlice.reducer;
